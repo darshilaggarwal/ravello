@@ -1,0 +1,11 @@
+{"level":"warn","message":"Redis client not initialized. Check REDIS_URI configuration.","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"Server running in production mode on port 9000","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"New crash game initialized - Crash point: 1.51","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"MongoDB Connected: localhost","timestamp":"2025-03-29 21:45:07"}
+{"level":"warn","message":"Redis client not initialized. Check REDIS_URI configuration.","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"Server running in production mode on port 9000","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"New crash game initialized - Crash point: 1.12","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"MongoDB Connected: localhost","timestamp":"2025-03-29 21:45:07"}
+{"level":"info","message":"New crash game initialized - Crash point: 1.16","timestamp":"2025-03-29 21:45:22"}
+{"level":"info","message":"New crash game initialized - Crash point: 1.73","timestamp":"2025-03-29 21:45:38"}
+{"level":"info","message":"New crash game initialized - Crash point: 23.75","timestamp":"2025-03-29 21:45:54"}
