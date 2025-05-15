@@ -83,9 +83,22 @@ const Register = () => {
           email: formData.email,
           password: formData.password
         };
-        await dispatch(register(userData));
+        const result = await dispatch(register(userData));
+        
+        if (result.success) {
+          setRegistrationSuccess(true);
+          toast.success(result.message);
+          
+          // If auto-login was successful, redirect to home
+          // If manual login is required, redirect to login page
+          const timer = setTimeout(() => {
+            navigate(result.requireManualLogin ? '/login' : '/');
+          }, 2000);
+          
+          return () => clearTimeout(timer);
+        }
       } catch (error) {
-        // Error is already handled in the reducer and displayed by useEffect
+        // Error is already handled in the reducer
       }
     }
   };
@@ -95,8 +108,8 @@ const Register = () => {
       <h2 className="text-2xl font-bold text-white mb-6 text-center">Create your account</h2>
       
       {registrationSuccess ? (
-        <div className="bg-green-600 text-white p-4 rounded-md mb-4">
-          Registration successful! Redirecting you to login...
+        <div className="bg-green-600 text-white p-4 rounded-md mb-4 text-center">
+          Registration successful! Please wait...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">

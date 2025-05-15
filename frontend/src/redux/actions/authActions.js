@@ -113,7 +113,21 @@ export const register = (userData) => async (dispatch) => {
       payload: response.data.message || 'Registration successful'
     });
     
-    return { success: true, message: response.data.message || 'Registration successful' };
+    // After successful registration, attempt to login automatically
+    try {
+      await dispatch(login({
+        email: userData.email,
+        password: userData.password
+      }));
+      return { success: true, message: 'Registration and login successful' };
+    } catch (loginError) {
+      // If auto-login fails, still return success but with a message to login manually
+      return { 
+        success: true, 
+        message: 'Registration successful. Please log in with your credentials.',
+        requireManualLogin: true
+      };
+    }
   } catch (error) {
     dispatch({
       type: REGISTER_FAILURE,
