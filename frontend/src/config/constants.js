@@ -1,11 +1,11 @@
 // API base URL
 export const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.revello.com' 
+  ? import.meta.env.VITE_API_URL 
   : 'http://localhost:9000';
 
 // Socket URL
 export const SOCKET_URL = process.env.NODE_ENV === 'production'
-  ? 'wss://api.revello.com'
+  ? import.meta.env.VITE_SOCKET_URL
   : 'ws://localhost:9000';
 
 // Pagination defaults
