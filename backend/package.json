@@ -5,7 +5,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "cd ../frontend && npm install && npm run build && cp -r dist ../backend/public",
+    "deploy": "npm install && npm run build && npm start"
   },
   "keywords": [],
   "author": "darshil aggarwal",

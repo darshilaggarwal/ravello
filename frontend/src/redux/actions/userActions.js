@@ -22,32 +22,13 @@ export const getProfile = () => async (dispatch) => {
     
     console.log('Getting user profile...');
     
-    // Changed to use '/api/auth/me' endpoint which returns the authenticated user
+    // Get the user profile from the backend
     const response = await api.get('/api/auth/me');
     console.log('Profile response:', response.data);
     
-    // Check if we have a mockUserData in localStorage (for development mode)
-    let userData = response.data;
-    const localStorageData = localStorage.getItem('mockUserData');
+    // Always use the server's user data
+    const userData = response.data;
     
-    // If we're in development mode and have localStorage wallet data, preserve it
-    if (process.env.NODE_ENV === 'development' && localStorageData) {
-      try {
-        const parsedData = JSON.parse(localStorageData);
-        if (parsedData && typeof parsedData.balance === 'number') {
-          // Use the localStorage balance instead of the database balance
-          userData = {
-            ...userData,
-            balance: parsedData.balance
-          };
-          console.log('Using localStorage balance:', parsedData.balance);
-        }
-      } catch (e) {
-        console.error('Error parsing localStorage data:', e);
-      }
-    }
-    
-    // No need to extract data.data since the API returns the user object directly
     dispatch({
       type: GET_PROFILE_SUCCESS,
       payload: userData
@@ -55,13 +36,13 @@ export const getProfile = () => async (dispatch) => {
     
     return userData;
   } catch (error) {
-    console.error('Profile fetch error:', error.response?.data || error.message);
-    
     dispatch({
       type: GET_PROFILE_FAILURE,
-      payload: error.response?.data?.message || error.message || 'Failed to load profile'
+      payload:
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message
     });
-    
     throw error;
   }
 };
@@ -142,7 +123,20 @@ export const getTransactions = (page = 1, limit = 10) => async (dispatch) => {
 };
 
 // Update user balance (used by game actions)
-export const updateBalance = (newBalance) => ({
-  type: UPDATE_BALANCE,
-  payload: newBalance
-}); 
+export const updateBalance = (newBalance) => async (dispatch, getState) => {
+  try {
+    // First update balance in Redux for immediate UI feedback
+    dispatch({
+      type: UPDATE_BALANCE,
+      payload: newBalance
+    });
+    
+    // Always sync with backend to ensure persistence
+    await api.put('/api/users/balance', { balance: newBalance });
+    
+    return newBalance;
+  } catch (error) {
+    console.error('Error updating balance:', error);
+    throw error;
+  }
+}; 

@@ -1,15 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+import { clearGameHistory } from '../../redux/actions/games/statsActions';
 
 /**
  * GameStats component displays statistics and a graph of wagering history
  * This can be used across all game types to show consistent stats
  */
 const GameStats = ({ gameType }) => {
+  const dispatch = useDispatch();
   const [showStats, setShowStats] = useState(true);
   const [debugMode, setDebugMode] = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
   const { profile } = useSelector((state) => state.user);
+  const { isAuthenticated } = useSelector((state) => state.auth);
   
   // Get game history based on game type
   const gameHistory = useSelector((state) => {
@@ -67,6 +72,34 @@ const GameStats = ({ gameType }) => {
   // Toggle debug mode to see raw history data
   const toggleDebugMode = () => {
     setDebugMode(!debugMode);
+  };
+  
+  // Handle clearing game history
+  const handleClearStats = () => {
+    setShowConfirmClear(true);
+  };
+  
+  // Confirm clearing stats
+  const confirmClearStats = () => {
+    dispatch(clearGameHistory(gameType))
+      .then((result) => {
+        if (result.success) {
+          toast.success(`${gameType.charAt(0).toUpperCase() + gameType.slice(1)} stats cleared successfully`);
+        } else {
+          toast.error(result.message);
+        }
+      })
+      .catch((error) => {
+        toast.error(`Error clearing stats: ${error.message}`);
+      })
+      .finally(() => {
+        setShowConfirmClear(false);
+      });
+  };
+  
+  // Cancel clearing stats
+  const cancelClearStats = () => {
+    setShowConfirmClear(false);
   };
   
   // Force restore from localStorage
@@ -271,30 +304,15 @@ const GameStats = ({ gameType }) => {
                 <div className="text-xs text-gray-400 mt-1 truncate w-full text-center">{index + 1}</div>
                 
                 {/* Tooltip on hover */}
-                <div className="absolute bottom-full mb-2 bg-gray-900 text-white text-xs p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-36 -left-14">
-                  <p className="font-bold mb-1">{timestamp}</p>
-                  <p>Bet: ${betAmount.toFixed(2)}</p>
-                  <p>{isWin ? 'Win' : 'Loss'}: ${Math.abs(profit).toFixed(2)}</p>
-                  {gameType === 'dice' && game.roll && (
-                    <p>Roll: {game.roll} ({game.rollType === 'over' ? '>' : '<'} {game.target})</p>
-                  )}
-                  {gameType === 'crash' && game.crashPoint && (
-                    <p>Crash: {game.crashPoint.toFixed(2)}x</p>
-                  )}
-                  {gameType === 'plinko' && game.finalMultiplier && (
-                    <p>Multiplier: {game.finalMultiplier.toFixed(2)}x</p>
-                  )}
-                  {gameType === 'mines' && (
-                    <p>Revealed: {game.revealCount || 0}/{25 - (game.mineCount || 5)}</p>
-                  )}
+                <div className="absolute bottom-full mb-2 bg-gray-900 text-white text-xs p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                  <div>Game #{gameHistory.length - index}</div>
+                  <div>Bet: ${betAmount.toFixed(2)}</div>
+                  <div>Profit: ${profit.toFixed(2)}</div>
+                  {timestamp && <div>{timestamp}</div>}
                 </div>
               </div>
             );
           })}
-        </div>
-        <div className="flex justify-between mt-2 text-xs text-gray-400">
-          <div>Newest</div>
-          <div>Oldest</div>
         </div>
       </div>
     );
@@ -327,23 +345,66 @@ const GameStats = ({ gameType }) => {
     );
   };
   
+  // Render confirmation modal for clearing stats
+  const renderConfirmClearModal = () => {
+    if (!showConfirmClear) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4">
+          <h3 className="text-xl font-bold text-white mb-4">Clear Statistics</h3>
+          <p className="text-gray-300 mb-6">
+            Are you sure you want to clear all your {gameType} statistics? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={cancelClearStats}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmClearStats}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
+            >
+              Clear Stats
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
   return (
-    <div className="bg-gray-700 rounded-lg overflow-hidden">
+    <div className="bg-gray-700 rounded-lg overflow-hidden shadow-lg">
       <div 
-        className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600"
+        className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600 transition-colors"
         onClick={() => setShowStats(!showStats)}
       >
         <h3 className="text-lg font-bold text-white">Game Statistics</h3>
         <div className="flex items-center">
-          <button 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              toggleDebugMode(); 
-            }}
-            className="text-xs bg-gray-800 hover:bg-gray-900 text-gray-300 px-2 py-1 rounded mr-3"
-          >
-            {debugMode ? 'Hide Debug' : 'Debug'}
-          </button>
+          {showStats && isAuthenticated && (
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                handleClearStats(); 
+              }}
+              className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded mr-3 transition-colors"
+            >
+              Clear Stats
+            </button>
+          )}
+          {process.env.NODE_ENV === 'development' && (
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                toggleDebugMode(); 
+              }}
+              className="text-xs bg-gray-800 hover:bg-gray-900 text-gray-300 px-2 py-1 rounded mr-3"
+            >
+              {debugMode ? 'Hide Debug' : 'Debug'}
+            </button>
+          )}
           <div className="text-gray-300">
             {showStats ? "▲ Hide" : "▼ Show"}
           </div>
@@ -417,13 +478,16 @@ const GameStats = ({ gameType }) => {
           {renderAdvancedStats()}
         </div>
       )}
+      
+      {/* Confirmation Modal */}
+      {renderConfirmClearModal()}
     </div>
   );
 };
 
 // Helper component for stat cards
 const StatCard = ({ title, value, iconColor }) => (
-  <div className="bg-gray-800 p-3 rounded-lg">
+  <div className="bg-gray-800 p-3 rounded-lg shadow hover:shadow-lg transition-shadow">
     <div className="flex items-center mb-1">
       <div className={`w-2 h-2 rounded-full ${iconColor} mr-2`}></div>
       <h5 className="text-xs text-gray-400">{title}</h5>

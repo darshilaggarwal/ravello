@@ -5,7 +5,9 @@ import {
   PLINKO_BALL_UPDATE,
   PLINKO_BALL_LANDED,
   PLINKO_RESET_GAME,
-  PLINKO_SET_RISK
+  PLINKO_SET_RISK,
+  PLINKO_CLEAR_HISTORY,
+  LOGOUT
 } from '../../actions/types';
 import { GAMES } from '../../../config/constants';
 
@@ -90,6 +92,21 @@ const plinkoReducer = (state = initialState, action) => {
         ...state,
         currentRisk: action.payload,
         multipliers: GAMES.PLINKO.MULTIPLIERS[action.payload]
+      };
+      
+    case PLINKO_CLEAR_HISTORY:
+      // Clear history when explicitly requested
+      localStorage.removeItem('plinkoHistory');
+      return {
+        ...state,
+        history: []
+      };
+      
+    case LOGOUT:
+      // Clear history when user logs out
+      return {
+        ...initialState,
+        history: []
       };
       
     default:

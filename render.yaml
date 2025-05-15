@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: revello
+    env: node
+    region: singapore
+    buildCommand: cd backend && npm install && cd ../frontend && npm install && npm run build && cp -r dist ../backend/public
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        value: mongodb+srv://darshilaggarwal55:abcdefgh@cluster0.tfvjenr.mongodb.net/revello?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: API_RATE_LIMIT
+        value: 100
+      - key: API_RATE_WINDOW_MS
+        value: 900000 

@@ -3,7 +3,9 @@ import {
   DICE_PLAY_SUCCESS,
   DICE_PLAY_FAILURE,
   DICE_RESET_RESULT,
-  DICE_RESET_GAME
+  DICE_RESET_GAME,
+  DICE_CLEAR_HISTORY,
+  LOGOUT
 } from '../../actions/types';
 
 // Load existing history from localStorage
@@ -72,6 +74,21 @@ const diceReducer = (state = initialState, action) => {
         ...initialState,
         // Preserve history when resetting the game
         history: state.history
+      };
+      
+    case DICE_CLEAR_HISTORY:
+      // Clear history when explicitly requested
+      localStorage.removeItem('diceHistory');
+      return {
+        ...state,
+        history: []
+      };
+      
+    case LOGOUT:
+      // Clear history when user logs out
+      return {
+        ...initialState,
+        history: []
       };
       
     default:

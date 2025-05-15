@@ -12,7 +12,9 @@ import {
   CRASH_GET_HISTORY_REQUEST,
   CRASH_GET_HISTORY_SUCCESS,
   CRASH_GET_HISTORY_FAILURE,
-  CRASH_RESET_GAME
+  CRASH_RESET_GAME,
+  CRASH_CLEAR_HISTORY,
+  LOGOUT
 } from '../../actions/types';
 
 // Load existing history from localStorage
@@ -28,7 +30,7 @@ const loadSavedHistory = () => {
 
 const initialState = {
   status: 'waiting', // waiting, in_progress, crashed
-  currentMultiplier: 1.0,
+  currentMultiplier: 0.0,
   crashPoint: null,
   timeElapsed: 0,
   history: loadSavedHistory(),
@@ -48,7 +50,7 @@ const crashReducer = (state = initialState, action) => {
       return {
         ...state,
         status: 'in_progress',
-        currentMultiplier: 1.0,
+        currentMultiplier: 0.0,
         crashPoint: action.payload.crashPoint,
         timeElapsed: 0,
         myBet: null
@@ -182,6 +184,19 @@ const crashReducer = (state = initialState, action) => {
       return {
         ...initialState,
         history: state.history
+      };
+      
+    case CRASH_CLEAR_HISTORY:
+      localStorage.removeItem('crashHistory');
+      return {
+        ...state,
+        history: []
+      };
+      
+    case LOGOUT:
+      return {
+        ...initialState,
+        history: []
       };
       
     default:

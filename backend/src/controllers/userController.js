@@ -165,6 +165,51 @@ exports.getGames = async (req, res) => {
   }
 };
 
+// @desc    Update user balance
+// @route   PUT /api/users/balance
+// @access  Private
+exports.updateBalance = async (req, res) => {
+  try {
+    const { balance } = req.body;
+    
+    // Validate balance
+    if (balance === undefined || typeof balance !== 'number' || balance < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid balance is required'
+      });
+    }
+    
+    // Update user balance
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { balance },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        balance: user.balance
+      },
+      message: 'Balance updated successfully'
+    });
+  } catch (error) {
+    logger.error(`Update balance error: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating balance'
+    });
+  }
+};
+
 // --- ADMIN ROUTES ---
 
 // @desc    Get all users

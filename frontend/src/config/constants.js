@@ -15,19 +15,19 @@ export const DEFAULT_PAGE_SIZE = 10;
 export const GAMES = {
   DICE: {
     MIN_BET: 1,
-    MAX_BET: 1000,
+    MAX_BET: 1000000,
     MIN_MULTIPLIER: 1.01,
     MAX_MULTIPLIER: 100,
     DEFAULT_CHANCE: 50
   },
   CRASH: {
     MIN_BET: 1,
-    MAX_BET: 1000,
+    MAX_BET: 1000000,
     DEFAULT_AUTO_CASHOUT: 2,
   },
   MINES: {
     MIN_BET: 1,
-    MAX_BET: 1000,
+    MAX_BET: 1000000,
     MIN_MINES: 1,
     MAX_MINES: 24,
     DEFAULT_MINES: 5,
@@ -35,7 +35,7 @@ export const GAMES = {
   },
   PLINKO: {
     MIN_BET: 1,
-    MAX_BET: 1000,
+    MAX_BET: 10000,
     ROWS: 16,
     PINS_PER_ROW: 16,
     RISK_LEVELS: ['Low', 'Medium', 'High'],

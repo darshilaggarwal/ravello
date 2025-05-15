@@ -62,7 +62,7 @@ app.use(helmet());
 // Enable CORS
 app.use(cors({
   origin: config.isProduction 
-    ? 'https://revello.com' 
+    ? ['https://revello.onrender.com', 'https://revello-app.onrender.com'] 
     : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177', 'http://localhost:5178', 'http://localhost:5179', 'http://localhost:5180'],
   credentials: true
 }));
@@ -78,15 +78,22 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
 
-// Health check route
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running',
-    environment: config.nodeEnv,
-    timestamp: new Date().toISOString()
+// Serve frontend in production
+if (config.isProduction) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
-});
+} else {
+  // Health check route
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      success: true,
+      message: 'Server is running',
+      environment: config.nodeEnv,
+      timestamp: new Date().toISOString()
+    });
+  });
+}
 
 // Error handling middleware
 app.use(errorHandler);

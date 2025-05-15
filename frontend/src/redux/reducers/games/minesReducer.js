@@ -8,7 +8,9 @@ import {
   MINES_CASHOUT_REQUEST,
   MINES_CASHOUT_SUCCESS,
   MINES_CASHOUT_FAILURE,
-  MINES_RESET_GAME
+  MINES_RESET_GAME,
+  MINES_CLEAR_HISTORY,
+  LOGOUT
 } from '../../actions/types';
 
 // Load existing history from localStorage
@@ -150,6 +152,21 @@ const minesReducer = (state = initialState, action) => {
         ...initialState,
         // Preserve history when resetting the game
         history: state.history
+      };
+      
+    case MINES_CLEAR_HISTORY:
+      // Clear history when explicitly requested
+      localStorage.removeItem('minesHistory');
+      return {
+        ...state,
+        history: []
+      };
+      
+    case LOGOUT:
+      // Clear history when user logs out
+      return {
+        ...initialState,
+        history: []
       };
       
     default:

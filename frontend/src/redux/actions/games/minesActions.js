@@ -13,6 +13,7 @@ import {
 import { updateBalance } from '../userActions';
 import api from '../../../utils/api';
 import { GAMES } from '../../../config/constants';
+import { addToCombinedHistory } from './statsActions';
 
 // Mock game state for development
 let mockGameState = {
@@ -212,6 +213,18 @@ export const revealTile = (position) => async (dispatch, getState) => {
           minePositions
         }
       });
+
+      // Add failure result to combined history
+      dispatch(addToCombinedHistory({
+        id: activeGame.id || `mines-${Date.now()}`,
+        betAmount: activeGame.betAmount,
+        winAmount: 0,
+        revealCount: mines.revealedTiles.length,
+        mineCount: activeGame.mineCount,
+        timestamp: Date.now(),
+        isWin: false
+      }, 'mines'));
+
       return { isMine, minePositions };
     }
     
@@ -290,6 +303,17 @@ export const cashoutMines = () => async (dispatch, getState) => {
     
     // Save to localStorage for persistence
     const updatedHistory = saveGameHistory(historyEntry);
+    
+    // Add success result to combined history
+    dispatch(addToCombinedHistory({
+      id: activeGame.id || `mines-${Date.now()}`,
+      betAmount: activeGame.betAmount,
+      winAmount: winAmount,
+      revealCount: revealedTiles.length,
+      mineCount: activeGame.mineCount,
+      timestamp: Date.now(),
+      isWin: true
+    }, 'mines'));
     
     dispatch({
       type: MINES_CASHOUT_SUCCESS,

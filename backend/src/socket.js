@@ -123,7 +123,7 @@ const initCrashGame = async (io) => {
       crashPoint,
       startTime: Date.now(),
       bettingPhaseEnd: Date.now() + BETTING_PHASE_DURATION,
-      currentMultiplier: 1.00
+      currentMultiplier: 0.00
     };
     
     // Store game data
@@ -173,7 +173,7 @@ const startCrashGame = async (io) => {
     io.to('crash').emit('game_start');
     
     let elapsed = 0;
-    let currentMultiplier = 1.00;
+    let currentMultiplier = 0.00;
     
     // Start the game tick interval
     crashGameInterval = setInterval(async () => {
@@ -181,8 +181,8 @@ const startCrashGame = async (io) => {
         elapsed += TICK_INTERVAL;
         
         // Calculate current multiplier
-        // Use a formula that grows slower over time: (elapsed_time_in_seconds + 1)^0.7
-        currentMultiplier = Math.pow((elapsed / 1000) + 1, 0.7);
+        // Start from 0 and grow slower over time
+        currentMultiplier = Math.pow((elapsed / 1000), 0.7);
         currentMultiplier = parseFloat(currentMultiplier.toFixed(2));
         
         // Update game data
@@ -326,20 +326,44 @@ const endCrashGame = async (io, gameData) => {
 
 // Generate crash point from hash
 const generateCrashPoint = (hash) => {
-  // Convert first 13 characters of hash to a number
-  const hexString = hash.slice(0, 13);
+  // Convert first 8 characters of hash to a number between 0-1
+  const hexString = hash.slice(0, 8);
   const decimalValue = parseInt(hexString, 16);
+  const randomValue = decimalValue / 0xffffffff; // Normalize to 0-1
   
-  // Calculate crash point with house edge (5%)
-  // Formula: (100 - house_edge) / (r % 100)
-  // where r is a number between 0-99
-  const r = decimalValue % 100;
-  if (r === 0) return 100.00; // Max crash point (rare)
+  // New distribution for more challenging gameplay:
+  // - 50% chance to crash below 1.5x
+  // - 30% chance to crash between 1.5x and 2x
+  // - 15% chance to crash between 2x and 5x
+  // - 4% chance to crash between 5x and 10x
+  // - 1% chance to crash above 10x
   
-  let crashPoint = (100 - 5) / r;
-  crashPoint = Math.max(1.01, crashPoint); // Minimum crash point
-  crashPoint = Math.min(100.00, crashPoint); // Maximum crash point
+  let crashPoint;
   
+  if (randomValue < 0.50) {
+    // 50% chance to crash below 1.5x
+    crashPoint = 0 + (randomValue / 0.50) * 1.5;
+  } else if (randomValue < 0.80) {
+    // 30% chance to crash between 1.5x and 2x
+    crashPoint = 1.5 + ((randomValue - 0.50) / 0.30) * 0.5;
+  } else if (randomValue < 0.95) {
+    // 15% chance to crash between 2x and 5x
+    crashPoint = 2 + ((randomValue - 0.80) / 0.15) * 3;
+  } else if (randomValue < 0.99) {
+    // 4% chance to crash between 5x and 10x
+    crashPoint = 5 + ((randomValue - 0.95) / 0.04) * 5;
+  } else {
+    // 1% chance to crash between 10x and 100x
+    crashPoint = 10 + ((randomValue - 0.99) / 0.01) * 90;
+  }
+  
+  // Apply house edge (5%)
+  crashPoint = crashPoint * (1 - 0.05);
+  
+  // Make sure crash point is at least 0
+  crashPoint = Math.max(0, crashPoint);
+  
+  // Round to 2 decimal places
   return parseFloat(crashPoint.toFixed(2));
 };
 

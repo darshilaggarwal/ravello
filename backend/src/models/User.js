@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { WALLET } = require('../utils/constants');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -33,7 +34,7 @@ const userSchema = new mongoose.Schema({
   },
   balance: {
     type: Number,
-    default: 10000
+    default: WALLET.DEFAULT_BALANCE
   },
   role: {
     type: String,

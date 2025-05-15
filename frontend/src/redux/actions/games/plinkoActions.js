@@ -10,6 +10,7 @@ import {
 import { updateBalance } from '../userActions';
 import { GAMES } from '../../../config/constants';
 import soundManager from '../../../utils/SoundManager';
+import { addToCombinedHistory } from './statsActions';
 
 // Preload Plinko sounds
 soundManager.preloadAll({
@@ -209,6 +210,17 @@ const simulateBallPath = async (dispatch, ball, getState) => {
           }));
         }
       }
+      
+      // Add to combined history
+      dispatch(addToCombinedHistory({
+        id: currentBall.id,
+        betAmount: currentBall.betAmount,
+        winAmount: currentBall.winAmount,
+        finalMultiplier: currentBall.finalMultiplier,
+        timestamp: Date.now(),
+        risk: currentBall.risk || getState().currentRisk,
+        isWin: currentBall.winAmount > currentBall.betAmount
+      }, 'plinko'));
       
       break;
     }

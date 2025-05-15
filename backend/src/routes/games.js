@@ -5,6 +5,7 @@ const validateRequest = require('../middleware/validateRequest');
 const diceController = require('../controllers/diceController');
 const crashController = require('../controllers/crashController');
 const minesController = require('../controllers/minesController');
+const { GAMES } = require('../utils/constants');
 
 const router = express.Router();
 
@@ -16,8 +17,8 @@ const betValidation = [
   check('betAmount', 'Bet amount is required')
     .isNumeric()
     .withMessage('Bet amount must be a number')
-    .isFloat({ min: 1 })
-    .withMessage('Bet amount must be at least 1')
+    .isFloat({ min: GAMES.DICE.MIN_BET, max: GAMES.DICE.MAX_BET })
+    .withMessage(`Bet amount must be between ${GAMES.DICE.MIN_BET} and ${GAMES.DICE.MAX_BET}`)
 ];
 
 // Dice game routes

@@ -16,13 +16,14 @@ import {
 } from '../../actions/types';
 import { updateBalance } from '../../actions/userActions';
 import api from '../../../utils/api';
+import { addToCombinedHistory } from './statsActions';
 
 // Mock game state for development
 const mockGameState = {
   status: 'waiting', // waiting, in_progress, crashed
   startTime: null,
   crashPoint: null,
-  currentMultiplier: 1.0,
+  currentMultiplier: 0.0,
   crashedAt: null,
   timeElapsed: 0,
   players: [],
@@ -34,15 +35,49 @@ let waitingTimeout = null;
 
 // Helper to calculate crash point
 const calculateCrashPoint = () => {
-  // Simple random crash point generator
-  return parseFloat((1 + Math.random() * 10).toFixed(2));
+  // Generate random value between 0 and 1
+  const randomValue = Math.random();
+  
+  // Match the server-side probability distribution:
+  // - 50% chance to crash below 1.5x
+  // - 30% chance to crash between 1.5x and 2x
+  // - 15% chance to crash between 2x and 5x
+  // - 4% chance to crash between 5x and 10x
+  // - 1% chance to crash above 10x
+  
+  let crashPoint;
+  
+  if (randomValue < 0.50) {
+    // 50% chance to crash below 1.5x
+    crashPoint = 0 + (randomValue / 0.50) * 1.5;
+  } else if (randomValue < 0.80) {
+    // 30% chance to crash between 1.5x and 2x
+    crashPoint = 1.5 + ((randomValue - 0.50) / 0.30) * 0.5;
+  } else if (randomValue < 0.95) {
+    // 15% chance to crash between 2x and 5x
+    crashPoint = 2 + ((randomValue - 0.80) / 0.15) * 3;
+  } else if (randomValue < 0.99) {
+    // 4% chance to crash between 5x and 10x
+    crashPoint = 5 + ((randomValue - 0.95) / 0.04) * 5;
+  } else {
+    // 1% chance to crash between 10x and 100x
+    crashPoint = 10 + ((randomValue - 0.99) / 0.01) * 90;
+  }
+  
+  // Apply house edge (5%)
+  crashPoint = crashPoint * (1 - 0.05);
+  
+  // Make sure crash point is at least 0
+  crashPoint = Math.max(0, crashPoint);
+  
+  return parseFloat(crashPoint.toFixed(2));
 };
 
 // Helper to calculate current multiplier based on time elapsed
 const calculateMultiplier = (timeElapsed) => {
-  // Simple multiplier growth function
-  // e^(0.06 * t)
-  return parseFloat(Math.pow(Math.E, 0.06 * (timeElapsed / 1000)).toFixed(2));
+  // New multiplier growth function that starts from 0
+  // (t / 1000)^0.7 - matches server side calculation
+  return parseFloat(Math.pow(timeElapsed / 1000, 0.7).toFixed(2));
 };
 
 // Helper function to save game history to localStorage
@@ -92,12 +127,25 @@ export const updateMultiplier = (multiplier) => ({
 export const gameCrash = (data) => (dispatch, getState) => {
   const { crash } = getState().games;
   const myBet = crash.myBet;
-  let updatedHistory = [...(data.history || [])];
+  
+  // Add the crash point to history
+  const crashHistoryEntry = {
+    id: `crash-${Date.now()}`,
+    crashPoint: data.crashPoint,
+    timestamp: Date.now(),
+    type: 'crash'
+  };
+  
+  // Save to localStorage for persistence
+  saveGameHistory(crashHistoryEntry);
+
+  // Add to combined history
+  dispatch(addToCombinedHistory(crashHistoryEntry, 'crash'));
   
   // If player had an active bet and didn't cash out, record it as a loss
   if (myBet && !myBet.cashedOut) {
-    const historyEntry = {
-      id: `crash-${Date.now()}`,
+    const lossHistoryEntry = {
+      id: `crash-bet-${Date.now()}`,
       betAmount: myBet.amount,
       winAmount: 0,
       crashPoint: data.crashPoint,
@@ -106,18 +154,18 @@ export const gameCrash = (data) => (dispatch, getState) => {
       type: 'crash'
     };
     
-    updatedHistory = [historyEntry, ...updatedHistory];
-    
-    // Save to localStorage for persistence
-    saveGameHistory(historyEntry);
+    // Add to combined history when a player loses
+    dispatch(addToCombinedHistory(lossHistoryEntry, 'crash'));
   }
+  
+  // Fetch updated history after crash
+  dispatch(getCrashHistory());
   
   return dispatch({
     type: CRASH_GAME_CRASH,
     payload: {
       crashPoint: data.crashPoint,
-      crashedAt: data.crashedAt,
-      history: updatedHistory
+      crashedAt: data.crashedAt
     }
   });
 };
@@ -146,7 +194,7 @@ export const startCrashGame = () => (dispatch) => {
     mockGameState.status = 'in_progress';
     mockGameState.startTime = Date.now();
     mockGameState.crashPoint = crashPoint;
-    mockGameState.currentMultiplier = 1.0;
+    mockGameState.currentMultiplier = 0.0;
     mockGameState.timeElapsed = 0;
 
     dispatch({
@@ -313,6 +361,9 @@ export const cashOut = (betId) => async (dispatch, getState) => {
     // Save to localStorage for persistence
     const updatedHistory = saveGameHistory(historyEntry);
     
+    // Add to combined history when a player wins
+    dispatch(addToCombinedHistory(historyEntry, 'crash'));
+    
     dispatch({
       type: CRASH_CASHOUT_SUCCESS,
       payload: {
@@ -350,11 +401,14 @@ export const getCrashHistory = () => async (dispatch) => {
       type: CRASH_GET_HISTORY_REQUEST
     });
 
-    // In a real app, you'd make an API call here
-    // const response = await api.get('/games/crash/history');
+    // Make a real API call to get crash history
+    const response = await api.get('/api/games/crash/history');
     
-    // Simulate API response
-    const history = [1.5, 2.1, 1.2, 3.2, 1.7, 4.0, 1.1, 2.2, 5.1, 1.3];
+    let history = [];
+    if (response.data && response.data.success) {
+      // Extract crash points from API response
+      history = response.data.data.map(game => game.crashPoint);
+    }
 
     dispatch({
       type: CRASH_GET_HISTORY_SUCCESS,

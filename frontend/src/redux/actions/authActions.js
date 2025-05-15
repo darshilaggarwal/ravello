@@ -66,17 +66,17 @@ export const login = (credentials) => async (dispatch) => {
       throw new Error('Failed to save authentication tokens');
     }
     
-    // Initialize localStorage wallet data for development mode
-    if (process.env.NODE_ENV === 'development') {
-      localStorage.setItem('mockUserData', JSON.stringify({
-        balance: user.balance
-      }));
-      console.log('Initialized localStorage wallet with balance:', user.balance);
+    // Use the user data directly from the server response
+    let userData = { ...user };
+    
+    // Set default balance for new users if needed
+    if (userData.balance === undefined || userData.balance === null) {
+      userData.balance = 10000;
     }
     
     dispatch({
       type: LOGIN_SUCCESS,
-      payload: user
+      payload: userData
     });
     
     return { success: true, message: 'Login successful' };
@@ -100,7 +100,13 @@ export const register = (userData) => async (dispatch) => {
   dispatch({ type: REGISTER_REQUEST });
   
   try {
-    const response = await axios.post('/api/auth/register', userData);
+    // Ensure new users get 10,000 as signup reward
+    const userDataWithBalance = {
+      ...userData,
+      balance: 10000
+    };
+    
+    const response = await axios.post('/api/auth/register', userDataWithBalance);
     
     dispatch({
       type: REGISTER_SUCCESS,
@@ -119,12 +125,38 @@ export const register = (userData) => async (dispatch) => {
 };
 
 // Logout
-export const logout = () => (dispatch) => {
-  clearTokens();
-  
-  dispatch({ type: LOGOUT });
-  
-  return { success: true, message: 'Logged out successfully' };
+export const logout = () => async (dispatch) => {
+  try {
+    // If we're authenticated, send the current balance to the server before logging out
+    const token = Cookies.get('token');
+    if (token) {
+      const mockUserData = localStorage.getItem('mockUserData');
+      if (mockUserData) {
+        try {
+          const userData = JSON.parse(mockUserData);
+          if (userData && typeof userData.balance === 'number') {
+            // Send the current balance to the server before logging out
+            await axios.put('/api/users/update-balance', { balance: userData.balance });
+            console.log('Updated server with current balance:', userData.balance);
+          }
+        } catch (e) {
+          console.error('Error updating balance before logout:', e);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error during balance update on logout:', error);
+  } finally {
+    // Clear tokens
+    clearTokens();
+    
+    // Clear localStorage
+    localStorage.removeItem('mockUserData');
+    
+    dispatch({ type: LOGOUT });
+    
+    return { success: true, message: 'Logged out successfully' };
+  }
 };
 
 // Check Authentication
@@ -145,25 +177,14 @@ export const checkAuth = () => async (dispatch) => {
     const response = await axios.get('/api/auth/me');
     console.log('Auth check response:', response.data);
     
-    // Check if we have a mockUserData in localStorage (for development mode)
+    // Always use the server's balance
     let userData = response.data;
-    const localStorageData = localStorage.getItem('mockUserData');
     
-    // If we're in development mode and have localStorage wallet data, preserve it
-    if (process.env.NODE_ENV === 'development' && localStorageData) {
-      try {
-        const parsedData = JSON.parse(localStorageData);
-        if (parsedData && typeof parsedData.balance === 'number') {
-          // Use the localStorage balance instead of the database balance
-          userData = {
-            ...userData,
-            balance: parsedData.balance
-          };
-          console.log('Using localStorage balance in auth check:', parsedData.balance);
-        }
-      } catch (e) {
-        console.error('Error parsing localStorage data:', e);
-      }
+    // Store the user data in localStorage for development purposes
+    if (process.env.NODE_ENV === 'development') {
+      localStorage.setItem('mockUserData', JSON.stringify({
+        balance: userData.balance
+      }));
     }
     
     dispatch({

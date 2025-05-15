@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('./src/models/User');
+const { WALLET } = require('./src/utils/constants');
 require('dotenv').config();
 
 // Connect to MongoDB
@@ -10,15 +11,18 @@ mongoose.connect(process.env.MONGODB_URI)
     process.exit(1);
   });
 
-// Update all user balances to 10000
+// Update all users' balances
 const updateAllBalances = async () => {
   try {
-    const result = await User.updateMany(
-      {}, // match all users
-      { $set: { balance: 10000 } } // set balance to 10000
-    );
+    console.log('Starting balance update...');
+    const defaultBalance = WALLET.DEFAULT_BALANCE;
     
-    console.log(`Updated balance for ${result.modifiedCount} users`);
+    // Update all users with the default balance
+    const result = await User.updateMany({}, { balance: defaultBalance });
+    
+    console.log(`Updated ${result.modifiedCount} users with a balance of $${defaultBalance}`);
+    console.log(`${result.matchedCount} users found, ${result.modifiedCount} users updated`);
+    
     process.exit(0);
   } catch (error) {
     console.error('Error updating balances:', error);

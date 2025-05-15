@@ -33,6 +33,7 @@ router.put('/profile', updateUserValidation, validateRequest, userController.upd
 router.put('/password', updatePasswordValidation, validateRequest, userController.updatePassword);
 router.get('/transactions', userController.getTransactions);
 router.get('/games', userController.getGames);
+router.put('/balance', userController.updateBalance);
 
 // Admin routes - restricted to admin users
 router.use(restrictTo('admin'));

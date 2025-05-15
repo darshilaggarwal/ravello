@@ -2,6 +2,83 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getProfile, updateProfile, updatePassword } from '../redux/actions/userActions';
 import toast from 'react-hot-toast';
+import CombinedHistory from '../components/games/CombinedHistory';
+import AvatarSelector from '../components/profile/AvatarSelector';
+
+// Helper component to render the user's avatar
+const UserAvatar = ({ profile, size = 24, className = "" }) => {
+  if (!profile) return null;
+  
+  // Check if the avatar is one of our custom avatars
+  if (profile.avatarData) {
+    try {
+      const avatarData = JSON.parse(profile.avatarData);
+      return (
+        <div className={`h-${size} w-${size} rounded-full overflow-hidden ${className}`}>
+          <svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id={`gradient-profile-${avatarData.colors.primary}-${avatarData.colors.secondary}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={avatarData.colors.primary} />
+                <stop offset="100%" stopColor={avatarData.colors.secondary} />
+              </linearGradient>
+            </defs>
+            <rect 
+              width="100" 
+              height="100" 
+              fill={`url(#gradient-profile-${avatarData.colors.primary}-${avatarData.colors.secondary})`}
+              rx="15"
+            />
+            
+            {/* Simple indicator of pattern */}
+            {avatarData.pattern === 'circles' && (
+              <>
+                <circle cx="30%" cy="30%" r="15%" fill={avatarData.colors.accent} opacity="0.6" />
+                <circle cx="70%" cy="70%" r="20%" fill={avatarData.colors.accent} opacity="0.5" />
+                <circle cx="80%" cy="20%" r="10%" fill={avatarData.colors.accent} opacity="0.7" />
+              </>
+            )}
+            {avatarData.pattern === 'squares' && (
+              <>
+                <rect x="20%" y="20%" width="25%" height="25%" fill={avatarData.colors.accent} opacity="0.6" rx="8%" />
+                <rect x="60%" y="55%" width="30%" height="30%" fill={avatarData.colors.accent} opacity="0.5" rx="8%" />
+                <rect x="65%" y="15%" width="20%" height="20%" fill={avatarData.colors.accent} opacity="0.7" rx="8%" />
+              </>
+            )}
+            {/* Add other patterns as needed */}
+          </svg>
+        </div>
+      );
+    } catch (e) {
+      // If JSON parsing fails, fall back to default avatar
+      console.error("Error parsing avatar data", e);
+    }
+  }
+  
+  // Fall back to profile picture or default avatar
+  if (profile.profilePicture && profile.profilePicture !== 'default-profile.jpg') {
+    return (
+      <img
+        src={profile.profilePicture}
+        alt={profile.username}
+        className={`h-${size} w-${size} rounded-full object-cover ${className}`}
+      />
+    );
+  } else {
+    return (
+      <div className={`h-${size} w-${size} rounded-full bg-gray-600 flex items-center justify-center overflow-hidden ${className}`}>
+        {profile.username ? (
+          <span className="text-white text-2xl">{profile.username.charAt(0).toUpperCase()}</span>
+        ) : (
+          <img 
+            src="https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y" 
+            alt="Default profile" 
+            className="h-full w-full object-cover"
+          />
+        )}
+      </div>
+    );
+  }
+};
 
 const Profile = () => {
   const dispatch = useDispatch();
@@ -12,6 +89,7 @@ const Profile = () => {
     username: '',
     email: '',
     profilePicture: '',
+    avatarData: null,
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -23,6 +101,7 @@ const Profile = () => {
   const [profileErrors, setProfileErrors] = useState({});
   const [passwordErrors, setPasswordErrors] = useState({});
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
 
   useEffect(() => {
     dispatch(getProfile());
@@ -34,7 +113,18 @@ const Profile = () => {
         username: profile.username || '',
         email: profile.email || '',
         profilePicture: profile.profilePicture || '',
+        avatarData: profile.avatarData || null,
       });
+      
+      // If profile has avatar data, parse it for the avatar selector
+      if (profile.avatarData) {
+        try {
+          const avatarData = JSON.parse(profile.avatarData);
+          setSelectedAvatar(avatarData);
+        } catch (e) {
+          console.error("Error parsing avatar data", e);
+        }
+      }
     }
   }, [profile]);
 
@@ -89,6 +179,19 @@ const Profile = () => {
     setPasswordForm({
       ...passwordForm,
       [name]: value,
+    });
+  };
+  
+  const handleAvatarSelect = (avatar) => {
+    setSelectedAvatar(avatar);
+    // Store the avatar data as JSON string
+    setProfileForm({
+      ...profileForm,
+      avatarData: JSON.stringify({
+        name: avatar.name,
+        colors: avatar.colors,
+        pattern: avatar.pattern
+      }),
     });
   };
 
@@ -156,25 +259,7 @@ const Profile = () => {
         <div className="p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center mb-6">
             <div className="mr-6 mb-4 md:mb-0">
-              {profile?.profilePicture && profile.profilePicture !== 'default-profile.jpg' ? (
-                <img
-                  src={profile.profilePicture}
-                  alt={profile.username}
-                  className="h-24 w-24 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-24 w-24 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
-                  {profile?.username ? (
-                    <span className="text-white text-2xl">{profile.username.charAt(0).toUpperCase()}</span>
-                  ) : (
-                    <img 
-                      src="https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y" 
-                      alt="Default profile" 
-                      className="h-full w-full object-cover"
-                    />
-                  )}
-                </div>
-              )}
+              <UserAvatar profile={profile} size="24" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">{profile?.username}</h2>
@@ -196,6 +281,16 @@ const Profile = () => {
                 }`}
               >
                 Edit Profile
+              </button>
+              <button
+                onClick={() => setActiveTab('avatar')}
+                className={`ml-8 py-2 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'avatar'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                }`}
+              >
+                Choose Avatar
               </button>
               <button
                 onClick={() => setActiveTab('security')}
@@ -251,33 +346,43 @@ const Profile = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-300">
-                    Profile Picture URL
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="profilePicture"
-                      name="profilePicture"
-                      type="text"
-                      value={profileForm.profilePicture}
-                      onChange={handleProfileChange}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-gray-700 text-white sm:text-sm"
-                      placeholder="https://example.com/avatar.jpg"
-                    />
-                  </div>
-                </div>
-
                 <div className="pt-4">
                   <button
                     type="submit"
                     disabled={updateLoading}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                    className={`w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                      updateLoading
+                        ? 'bg-indigo-700 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                    }`}
                   >
                     {updateLoading ? 'Updating...' : 'Update Profile'}
                   </button>
                 </div>
               </form>
+            )}
+            
+            {activeTab === 'avatar' && (
+              <div>
+                <AvatarSelector 
+                  currentAvatar={selectedAvatar} 
+                  onSelectAvatar={handleAvatarSelect} 
+                />
+                
+                <div className="pt-6">
+                  <button
+                    onClick={handleProfileSubmit}
+                    disabled={updateLoading}
+                    className={`w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                      updateLoading
+                        ? 'bg-indigo-700 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                    }`}
+                  >
+                    {updateLoading ? 'Saving Avatar...' : 'Save Avatar'}
+                  </button>
+                </div>
+              </div>
             )}
 
             {activeTab === 'security' && (
@@ -349,7 +454,11 @@ const Profile = () => {
                   <button
                     type="submit"
                     disabled={updateLoading}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                    className={`w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                      updateLoading
+                        ? 'bg-indigo-700 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                    }`}
                   >
                     {updateLoading ? 'Updating...' : 'Update Password'}
                   </button>
@@ -359,6 +468,8 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      
+      <CombinedHistory />
     </div>
   );
 };
