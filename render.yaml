@@ -3,7 +3,7 @@ services:
     name: revello
     env: node
     region: singapore
-    buildCommand: cd backend && npm install && cd ../frontend && npm install && npm run build && cp -r dist ../backend/public
+    buildCommand: cd backend && npm install && cd ../frontend && npm install && npx vite build && cp -r dist ../backend/public
     startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
